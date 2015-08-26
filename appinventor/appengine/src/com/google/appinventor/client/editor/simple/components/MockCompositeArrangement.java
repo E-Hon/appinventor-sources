@@ -22,8 +22,12 @@ import com.google.appinventor.shared.rpc.project.ChecksumedFileException;
 import com.google.appinventor.shared.rpc.project.ChecksumedLoadFile;
 import com.google.appinventor.shared.youngandroid.YoungAndroidSourceAnalyzer;
 
+import com.google.common.collect.Lists;
+
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.TreeItem;
+
+import java.util.List;
 
 /**
  * It is basically a MockVerticalArrangement but with special configurations.
@@ -32,6 +36,8 @@ public final class MockCompositeArrangement extends MockHVArrangement {
 
   private String type;
   private String name;
+  private JSONObject composition;
+  private JSONObject propertiesMap;
 
   private static final String H_A = PROPERTY_NAME_HORIZONTAL_ALIGNMENT;
   private static final String V_A = PROPERTY_NAME_VERTICAL_ALIGNMENT;
@@ -54,6 +60,8 @@ public final class MockCompositeArrangement extends MockHVArrangement {
     this.type = type;
     this.name = name;
 
+    initPropertiesMap();
+
     addProperty(H_A, H_A_DEFAULT, H_A,
         new YoungAndroidHorizontalAlignmentChoicePropertyEditor());
     addProperty(V_A, V_A_DEFAULT, V_A,
@@ -61,11 +69,15 @@ public final class MockCompositeArrangement extends MockHVArrangement {
   }
 
   public void onCreateFromPalette() {
+    if (composition != null) {
+      buildDescendentTree(composition);
+      return;
+    }
+
     Ode ode = Ode.getInstance();
     long projectId = ode.getCurrentYoungAndroidProjectId();
-
-    String scmPath = "assets/external_comps/" + type + "/composition.scmx";
-    ode.getProjectService().load2(projectId, scmPath,
+    String fileId = "assets/external_comps/" + type + "/composition.scmx";
+    OdeAsyncCallback<ChecksumedLoadFile> callback =
         new OdeAsyncCallback<ChecksumedLoadFile>() {
           @Override
           public void onSuccess(ChecksumedLoadFile result) {
@@ -84,27 +96,14 @@ public final class MockCompositeArrangement extends MockHVArrangement {
               return;
             }
 
-            JSONObject props = YoungAndroidSourceAnalyzer.parseSourceFile(
-                content, new ClientJsonParser()).get("Properties").asObject();
+            composition = YoungAndroidSourceAnalyzer.parseSourceFile(content,
+                new ClientJsonParser()).asObject();
 
-            JSONValue hAValue = props.get(H_A);
-            JSONValue vAValue = props.get(V_A);
-
-            if (hAValue != null) {
-              changeProperty(H_A, hAValue.asString().getString());
-            }
-
-            if (vAValue != null) {
-              changeProperty(V_A, vAValue.asString().getString());
-            }
-
-            JSONArray components = props.get("$Components").asArray();
-            for (JSONValue component : components.getElements()) {
-              ((YaFormEditor) editor).createMockComponent(component.asObject(),
-                  MockCompositeArrangement.this);
-            }
+            buildDescendentTree(composition);
           }
-        });
+        };
+
+    ode.getProjectService().load2(projectId, fileId, callback);
   }
 
   @Override
@@ -144,6 +143,88 @@ public final class MockCompositeArrangement extends MockHVArrangement {
         Event.ONMOUSEMOVE, Event.ONMOUSEOVER, Event.ONMOUSEOUT, Event.ONCLICK};
     for (int eventBit : eventBits) {
       component.unsinkEvents(eventBit);
+    }
+  }
+
+  @Override
+  public void onPropertyChange(String propertyName, String newValue) {
+    if (propertiesMap == null) {
+      return;
+    }
+
+    JSONValue propJson = propertiesMap.get(propertyName);
+    if (propJson != null) {
+      JSONObject realPropInfo = propJson.asObject();
+      String realCompName = realPropInfo.get("$Name").asString().getString();
+      String realCompProp = realPropInfo.get("property").asString().getString();
+      MockComponent realComp = findCompByInstanceName(this, realCompName);
+      realComp.onPropertyChange(realCompProp, newValue);
+    } else {
+      super.onPropertyChange(propertyName, newValue);
+    }
+  }
+
+  // find the component down the tree by the instance name
+  private static MockComponent findCompByInstanceName(MockComponent comp, String name) {
+    if (comp.getName().equals(name)) {
+      return comp;
+    }
+
+    for (MockComponent child : comp.getChildren()) {
+      MockComponent result = findCompByInstanceName(child, name);
+      if (result != null) {
+        return result;
+      }
+    }
+
+    return null;
+  }
+
+  private void initPropertiesMap() {
+    if (propertiesMap != null) {
+      return;
+    }
+
+    Ode ode = Ode.getInstance();
+    long projectId = ode.getCurrentYoungAndroidProjectId();
+    String fileId = "assets/external_comps/" + type + "/mapping.txt";
+    OdeAsyncCallback<ChecksumedLoadFile> callback =
+        new OdeAsyncCallback<ChecksumedLoadFile>() {
+          @Override
+          public void onSuccess(ChecksumedLoadFile result) {
+            String content;
+            try {
+              content = result.getContent();
+            } catch (ChecksumedFileException e) {
+              onFailure(e);
+              return;
+            }
+
+            JSONObject map = new ClientJsonParser().parse(content).asObject();
+            propertiesMap = map.get("properties").asObject();
+          }
+        };
+
+    ode.getProjectService().load2(projectId, fileId, callback);
+  }
+
+  private void buildDescendentTree(JSONObject composition) {
+    JSONObject props = composition.get("Properties").asObject();
+
+    JSONValue hAValue = props.get(H_A);
+    JSONValue vAValue = props.get(V_A);
+
+    if (hAValue != null) {
+      changeProperty(H_A, hAValue.asString().getString());
+    }
+
+    if (vAValue != null) {
+      changeProperty(V_A, vAValue.asString().getString());
+    }
+
+    JSONArray components = props.get("$Components").asArray();
+    for (JSONValue component : components.getElements()) {
+      ((YaFormEditor) editor).createMockComponent(component.asObject(), this);
     }
   }
 }
