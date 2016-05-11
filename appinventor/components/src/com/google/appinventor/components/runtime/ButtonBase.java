@@ -18,7 +18,15 @@ import com.google.appinventor.components.runtime.util.TextViewUtil;
 import com.google.appinventor.components.runtime.util.ViewUtil;
 import android.view.MotionEvent;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.OvalShape;
@@ -380,8 +388,39 @@ public abstract class ButtonBase extends AndroidViewComponent
         setShape();
       }
     } else {
-      // If there is a background image
-      ViewUtil.setBackgroundImage(view, backgroundImageDrawable);
+      if (shape == Component.BUTTON_SHAPE_DEFAULT) {
+        // If there is a background image
+        ViewUtil.setBackgroundImage(view, backgroundImageDrawable);
+      } else {
+        Paint paint = new Paint();
+        paint.setAntiAlias(true);
+
+        Bitmap result = Bitmap.createBitmap(Width(), Height(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(result);
+
+        switch (shape) {
+          case Component.BUTTON_SHAPE_ROUNDED:
+            canvas.drawRoundRect(new RectF(0, 0, Width(), Height()),
+                ROUNDED_CORNERS_RADIUS, ROUNDED_CORNERS_RADIUS, paint);
+            break;
+          case Component.BUTTON_SHAPE_RECT:
+            canvas.drawRect(new RectF(0, 0, Width(), Height()), paint);
+            break;
+          case Component.BUTTON_SHAPE_OVAL:
+            canvas.drawOval(new RectF(0, 0, Width(), Height()), paint);
+            break;
+          default:
+            throw new IllegalArgumentException();
+        }
+
+        // this has to be set after drawing the shape
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+
+        Bitmap bm = ((BitmapDrawable) backgroundImageDrawable).getBitmap();
+        canvas.drawBitmap(bm, null, new Rect(0, 0, Width(), Height()), paint);
+
+        ViewUtil.setBackgroundImage(view, new BitmapDrawable(result));
+      }
     }
   }
 
