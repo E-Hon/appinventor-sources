@@ -80,6 +80,7 @@ import com.google.appinventor.shared.rpc.user.UserInfoServiceAsync;
 import com.google.appinventor.shared.settings.SettingsConstants;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.ScriptInjector;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
@@ -261,6 +262,20 @@ public class Ode implements EntryPoint {
   private boolean screensLocked;
 
   private SplashConfig splashConfig; // Splash Screen Configuration
+
+  public static void injectMissingCode() {
+    String missingCode =
+        "function YoungAndroidBooleanPropertyEditor(){" +
+          "this.trueValue = 'True';" +
+          "this.falseValue = 'False';" +
+          "this.checkbox = new CheckBox;" +
+          "$addValueChangeHandler(this.checkbox, this);" +
+          "$initWidget(this, this.checkbox);" +
+        "}" +
+        "defineClass(479, 1487, $intern_51, YoungAndroidBooleanPropertyEditor);" +
+        "var Lcom_google_appinventor_client_editor_youngandroid_properties_YoungAndroidBooleanPropertyEditor_2_classLit = createForClass('com.google.appinventor.client.editor.youngandroid.properties', 'YoungAndroidBooleanPropertyEditor', 479, Lcom_google_appinventor_client_widgets_properties_BooleanPropertyEditor_2_classLit);";
+    ScriptInjector.fromString(missingCode).inject();
+  }
 
   /**
    * Returns global instance of Ode.
@@ -618,6 +633,8 @@ public class Ode implements EntryPoint {
    */
   @Override
   public void onModuleLoad() {
+    injectMissingCode();
+
     Tracking.trackPageview();
 
     // Handler for any otherwise unhandled exceptions
@@ -1407,7 +1424,7 @@ public class Ode implements EntryPoint {
         HasVerticalAlignment.ALIGN_MIDDLE);
 
     Label messageChunk1 = new HTML(MESSAGES.createNoProjectsDialogMessage1());
-    
+
     messageChunk1.setWidth("23em");
     Label messageChunk2 = new Label(MESSAGES.createNoprojectsDialogMessage2());
 
