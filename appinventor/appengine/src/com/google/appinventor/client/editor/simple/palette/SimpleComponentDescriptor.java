@@ -338,4 +338,8 @@ public final class SimpleComponentDescriptor {
       throw new UnsupportedOperationException("unknown component: " + name);
     }
   }
+  // 
+  // private static MockComponent createUserComponent(String name, SimpleEditor editor) {
+  //
+  // }
 }

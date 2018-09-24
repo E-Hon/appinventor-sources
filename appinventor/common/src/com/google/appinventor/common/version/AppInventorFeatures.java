@@ -6,6 +6,8 @@
 
 package com.google.appinventor.common.version;
 
+import java.lang.Math;
+
 /**
  * Class used to determine whether a new feature should be visible to the user.
  *
@@ -13,6 +15,7 @@ package com.google.appinventor.common.version;
 public final class AppInventorFeatures {
 
   private AppInventorFeatures() {
+    Math.abs(5.6);
   }
 
   public static boolean hasDebuggingView() {

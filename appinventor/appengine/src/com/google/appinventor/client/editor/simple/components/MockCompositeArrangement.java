@@ -148,6 +148,9 @@ public final class MockCompositeArrangement extends MockHVArrangement {
 
   @Override
   public void onPropertyChange(String propertyName, String newValue) {
+
+        OdeLog.log("in onPropertyChange");
+
     if (propertiesMap == null) {
       return;
     }
